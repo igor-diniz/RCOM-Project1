@@ -78,23 +78,11 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    // Loop for input
-    int loop = 1;
-    int nChars = 0;
+    // Returns after 1 char have been input
+    int bytes = read(fd, packet, 1);
+    if (bytes == -1) return -1;
 
-    while (loop)
-    {
-        // Returns after 1 char have been input
-        int bytes = read(fd, packet + nChars, 1);
-        if (bytes == -1) return -1;
-        nChars += bytes;
-
-        if (packet[nChars - 1] == '\n') {
-            loop = 0;
-        }
-    }
-
-    return nChars;
+    return bytes;
 }
 
 ////////////////////////////////////////////////

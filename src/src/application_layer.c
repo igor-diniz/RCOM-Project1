@@ -2,6 +2,7 @@
 
 #include "application_layer.h"
 #include "link_layer.h"
+#include "frame.h"
 
 #define BUF_SIZE 256
 
@@ -11,8 +12,8 @@ int setUp(const char *serialPort, const char *role, int baudRate,
            int nTries, int timeout)
 {
     strcpy(parameters.serialPort, serialPort);
-    if (strcmp(role, "tx")) parameters.role = LlTx;
-    else if (strcmp(role, "rx")) parameters.role = LlRx;
+    if (strcmp(role, "tx") == 0) parameters.role = LlTx;
+    else if (strcmp(role, "rx") == 0) parameters.role = LlRx;
     else exit (-1);
     parameters.baudRate = baudRate;
     parameters.nRetransmissions = nTries;
@@ -21,26 +22,30 @@ int setUp(const char *serialPort, const char *role, int baudRate,
     return llopen(parameters);
 }
 
+int setConnection() {
+    unsigned char buf[BUF_SIZE] = {0};
+    if (parameters.role == LlTx) {
+        writeFrame(SET, ADDR_T);
+        printf("Sent SET frame.\n");
+        sleep(1);
+        if (readFrame(buf, UA, ADDR_T) == 0)
+            printf("Read UA frame.\n");
+    }
+    else if (parameters.role == LlRx) {
+        if (readFrame(buf, SET, ADDR_T) == 0) {
+            writeFrame(UA, ADDR_T);
+            printf("Sent UA frame.\n");
+        }
+    }
+    return 0;
+}
+
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
     setUp(serialPort, role, baudRate, nTries, timeout);
-    unsigned char buf[BUF_SIZE] = {0};
-    unsigned char hello[BUF_SIZE] = {0};
 
-    for (int i = 0; i < 6; i++) {
-        hello[i] = 97 + i;
-    }
-    
-    hello[5] = '\n';
-    if (parameters.role == LlTx) { 
-        llwrite(hello, strlen((char*)hello));
-        printf("Written to port \n");
-    }
-    else {
-        llread(buf);
-        printf("%s\n", buf);
-    }
+    setConnection();
 
     llclose(1);
 }
