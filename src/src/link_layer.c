@@ -84,12 +84,12 @@ int llread(unsigned char *packet)
 
     while (loop)
     {
-        // Returns after 5 chars have been input
+        // Returns after 1 char have been input
         int bytes = read(fd, packet + nChars, 1);
         if (bytes == -1) return -1;
         nChars += bytes;
 
-        if (packet[nChars] == '\0') {
+        if (packet[nChars - 1] == '\n') {
             loop = 0;
         }
     }
