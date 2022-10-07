@@ -2,12 +2,12 @@
 
 static State state = START;
 
-int readFrame(unsigned char* frame, unsigned char expected, unsigned char addr) {
+int readFrame(int fd, unsigned char expected, unsigned char addr) {
     unsigned char buf[sizeof(unsigned char) + 1] = {0};
     state = START;
 
     while (state != STOP) {
-        if (llread(buf) == -1) return -1;
+        if (read(fd, buf, 1) == -1) return -1;
         switch (state) {
             case START:
                 if (buf[0] == FLAG)
@@ -45,7 +45,7 @@ int readFrame(unsigned char* frame, unsigned char expected, unsigned char addr) 
 
             case BCC_OK:
                 if (buf[0] == FLAG)
-                    state = STOP;
+                    return 1;
                 else 
                     state = START;
                 break;
@@ -57,7 +57,7 @@ int readFrame(unsigned char* frame, unsigned char expected, unsigned char addr) 
     return 0;
 }
 
-int writeFrame(unsigned char ctrl, unsigned char addr) {
+int writeFrame(int fd, unsigned char ctrl, unsigned char addr) {
     unsigned char buf[BUF_SIZE + 1] = {0};
     buf[0] = FLAG;
     buf[1] = addr;
@@ -65,5 +65,9 @@ int writeFrame(unsigned char ctrl, unsigned char addr) {
     buf[3] = addr ^ ctrl;
     buf[4] = FLAG;
     buf[5] = '\0';
-    return llwrite(buf, 5);
+    return write(fd, buf, 5);
+}
+
+void setState(State new_state) {
+    state = new_state;
 }

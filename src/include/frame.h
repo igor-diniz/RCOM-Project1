@@ -17,6 +17,8 @@ typedef enum {
     STOP
 } State;
 
-int readFrame(unsigned char* frame, unsigned char expected, unsigned char addr);
+int readFrame(int fd, unsigned char expected, unsigned char addr);
 
-int writeFrame(unsigned char ctrl, unsigned char addr);
+int writeFrame(int fd, unsigned char ctrl, unsigned char addr);
+
+void setState(State new_state);

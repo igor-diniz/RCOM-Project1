@@ -1,21 +1,36 @@
 // Link layer protocol implementation
 
 #include "link_layer.h"
+#include "frame.h"
+#include <signal.h>
 
 static int fd;
 static struct termios oldtio;
 static struct termios newtio;
+
+static LinkLayer parameters;
+
+static int numTries = -1;
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 #define BUF_SIZE 256
 
-////////////////////////////////////////////////
-// LLOPEN
-////////////////////////////////////////////////
-int llopen(LinkLayer connectionParameters)
-{
+void alarmHandler(int signum) {
+    if (numTries < parameters.nRetransmissions) {
+        writeFrame(fd, SET, ADDR_T);
+        alarm(3);
+        printf("Sent SET frame.\n");
+        sleep(1);
+    }
+    else {
+        setState(STOP);
+    }
+    numTries++;
+}
+
+int openPort(LinkLayer connectionParameters) {
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     if (fd < 0)
     {
@@ -66,11 +81,42 @@ int llopen(LinkLayer connectionParameters)
 }
 
 ////////////////////////////////////////////////
+// LLOPEN
+////////////////////////////////////////////////
+int llopen(LinkLayer connectionParameters)
+{
+    parameters = connectionParameters;
+    openPort(connectionParameters);
+    signal(SIGALRM, alarmHandler);
+    numTries = 0;
+
+    if (connectionParameters.role == LlTx) {
+        writeFrame(fd, SET, ADDR_T);
+        alarm(3);
+        printf("Sent SET frame.\n");
+        sleep(1);
+        if (readFrame(fd, UA, ADDR_T))
+            printf("Read UA frame.\n");
+        else {
+            return -1;
+        }
+    }
+    else if (connectionParameters.role == LlRx) {
+        if (readFrame(fd, SET, ADDR_T)) {
+            printf("Read SET frame.\n");
+            writeFrame(fd, UA, ADDR_T);
+            printf("Sent UA frame.\n");
+        }
+    }
+    return 0;
+}
+
+////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    return write(fd, buf, bufSize);
+    return 0;
 }
 
 ////////////////////////////////////////////////
@@ -78,11 +124,7 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    // Returns after 1 char have been input
-    int bytes = read(fd, packet, 1);
-    if (bytes == -1) return -1;
-
-    return bytes;
+    return 0;
 }
 
 ////////////////////////////////////////////////
