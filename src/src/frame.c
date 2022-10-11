@@ -57,7 +57,7 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
     return 0;
 }
 
-int writeFrame(int fd, unsigned char ctrl, unsigned char addr)
+int writeCtrlFrame(int fd, unsigned char ctrl, unsigned char addr)
 {
     unsigned char buf[BUF_SIZE + 1] = {0};
     buf[0] = FLAG;

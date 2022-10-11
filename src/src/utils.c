@@ -1,49 +1,43 @@
 #include "utils.h"
 
-void stuff(unsigned char *buf, int bufSize) {
-    unsigned char tmp[BUFFER_SIZE + 1] = {0};
-    int tmp_i = 0;
+int stuff(const unsigned char *src, unsigned char* dest, int bufSize) {
+    int dest_i = 0;
     for (int i = 0; i < bufSize; i++) {
-        if (buf[i] == 0x7e) {
-            tmp[tmp_i] = 0x7d;
-            tmp_i++;
-            tmp[tmp_i] = 0x5e;
+        if (src[i] == 0x7e) {
+            dest[dest_i] = 0x7d;
+            dest_i++;
+            dest[dest_i] = 0x5e;
         }
-        else if (buf[i] == 0x7d) {
-            tmp[tmp_i] = 0x7d;
-            tmp_i++;
-            tmp[tmp_i] = 0x5d;
+        else if (src[i] == 0x7d) {
+            dest[dest_i] = 0x7d;
+            dest_i++;
+            dest[dest_i] = 0x5d;
         }
         else {
-            tmp[tmp_i] = buf[i];
+            dest[dest_i] = src[i];
         }
-        tmp_i++;
+        dest_i++;
     }
-    for (int i = 0; i < tmp_i; i++) {
-        buf[i] = tmp[i];
-    }
+    return dest_i;
 }
 
 
-void deStuff(unsigned char *buf, int bufSize) {
-    unsigned char tmp[BUFFER_SIZE + 1] = {0};
-    int tmp_i = 0;
+int deStuff(const unsigned char *src, unsigned char* dest, int bufSize) {
+    int dest_i = 0;
     for (int i = 0; i < bufSize; i++) {
-        if (buf[i] == 0x7d) {
+        if (src[i] == 0x7d) {
             i++;
-            if (buf[i] == 0x5e) {
-                tmp[tmp_i] = 0x7e;
+            if (src[i] == 0x5e) {
+                dest[dest_i] = 0x7e;
             }
-            else if (buf[i] == 0x5d) {
-                tmp[tmp_i] = 0x7d;
+            else if (src[i] == 0x5d) {
+                dest[dest_i] = 0x7d;
             }
         }
         else {
-            tmp[tmp_i] = buf[i];
+            dest[dest_i] = src[i];
         }
-        tmp_i++;
+        dest_i++;
     }
-    for (int i = 0; i < tmp_i; i++) {
-        buf[i] = tmp[i];
-    }
+    return dest_i;
 }

@@ -2,6 +2,7 @@
 
 #include "link_layer.h"
 #include "frame.h"
+#include "utils.h"
 #include <signal.h>
 
 static int fd;
@@ -12,6 +13,8 @@ static LinkLayer parameters;
 
 static int numTries;
 static int alarmTriggered;
+
+static int frameNumber = 0;
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
@@ -88,9 +91,9 @@ int llopen(LinkLayer connectionParameters)
     if (connectionParameters.role == LlTx) {
         while ((numTries < connectionParameters.nRetransmissions) && getState() != STOP) {
             if (!alarmTriggered) {
-                writeFrame(fd, SET, ADDR_T);
+                writeCtrlFrame(fd, SET, ADDR_T);
                 setState(START);
-                alarm(3);
+                alarm(connectionParameters.timeout);
                 alarmTriggered = 1;
                 printf("Sent SET frame.\n");
             }
@@ -106,7 +109,7 @@ int llopen(LinkLayer connectionParameters)
             read(fd, buffer, 1);
             if (stateStep(buffer[0], SET, ADDR_T)) {
                 printf("Read SET frame.\n");
-                writeFrame(fd, UA, ADDR_T);
+                writeCtrlFrame(fd, UA, ADDR_T);
                 printf("Sent UA frame.\n");
                 return 0;
             };
@@ -120,15 +123,48 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    
+    unsigned char tmp[BUF_SIZE + 1] = {0};
+    unsigned char buffer[BUF_SIZE + 1] = {0};
+    unsigned char copy[BUF_SIZE + 1] = {0};
+    alarmTriggered = 0;
+    int nbytes = 0;
+    tmp[0] = FLAG;
+    tmp[1] = ADDR_T;
+    tmp[2] = frameNumber;
+    tmp[3] = ADDR_T ^ frameNumber;
+    bufSize = stuff(buf, copy, bufSize);
+    int i = 0;
+    for (; i < bufSize; i++) {
+        tmp[i + 4] = copy[i];
+    }
+    tmp[i] = 0;  //TODO bcc
+    tmp[i + 1] = FLAG;
+    tmp[i + 2] = '\0';
+
+    while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
+        if (!alarmTriggered) {
+            nbytes = write(fd, tmp, i);
+            setState(START);
+            alarm(parameters.timeout);
+            alarmTriggered = 1;
+            printf("%d bytes written.\n", nbytes);
+        }
+        read(fd, buffer, 1);
+        //TODO check for REJ
+        if (stateStep(buffer[0], RR, ADDR_T)) {
+            printf("Received RR frame.\n");
+            return 0;
+        }
+    }
     return 0;
 }
 
 ////////////////////////////////////////////////
 // LLREAD
 ////////////////////////////////////////////////
-int llread(unsigned char *packet)
-{
+int llread(unsigned char *packet) {
+    sleep(2);
+    writeCtrlFrame(fd, RR, ADDR_T);
     return 0;
 }
 

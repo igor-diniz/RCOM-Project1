@@ -29,5 +29,17 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Couldn't establish connection.\n");
     }
 
+    unsigned char buf[BUFFER_SIZE + 1] = {0};
+    for (int i = 0; i < 10; i++) {
+        buf[i] = 'a' + i;
+    }
+
+    if (parameters.role == LlTx) {
+        llwrite(buf, 10);
+    }
+    else if (parameters.role == LlRx) {
+        llread(buf);
+    }
+
     llclose(1);
 }

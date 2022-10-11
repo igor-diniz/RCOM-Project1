@@ -3,8 +3,11 @@
 #define FLAG 0x7E
 #define ADDR_T 0X03
 #define ADDR_R 0X01
+
 #define SET 0X03
 #define UA 0X07
+#define RR 0x05
+#define REJ 0x01
 
 #define BUF_SIZE 256
 
@@ -16,6 +19,7 @@ typedef enum {
     BCC_OK,
     STOP
 } State;
+
 
 /**
  * Handle state changes for data read.
@@ -33,7 +37,7 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr);
  * @param addr Address field to be written.
  * @return Number of bytes written.
 */
-int writeFrame(int fd, unsigned char ctrl, unsigned char addr);
+int writeCtrlFrame(int fd, unsigned char ctrl, unsigned char addr);
 
 /**
  * Change the current state.
