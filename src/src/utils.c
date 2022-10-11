@@ -3,12 +3,12 @@
 int stuff(const unsigned char *src, unsigned char* dest, int bufSize) {
     int dest_i = 0;
     for (int i = 0; i < bufSize; i++) {
-        if (src[i] == 0x7e) {
+        if (src[i] == 0x7e && i + 1 < bufSize) {
             dest[dest_i] = 0x7d;
             dest_i++;
             dest[dest_i] = 0x5e;
         }
-        else if (src[i] == 0x7d) {
+        else if (src[i] == 0x7d && i + 1 < bufSize) {
             dest[dest_i] = 0x7d;
             dest_i++;
             dest[dest_i] = 0x5d;
@@ -22,10 +22,14 @@ int stuff(const unsigned char *src, unsigned char* dest, int bufSize) {
 }
 
 
-int deStuff(const unsigned char *src, unsigned char* dest, int bufSize) {
+int deStuff(unsigned char *dest, int bufSize) {
+    unsigned char src[BUFFER_SIZE + 1] = {0};
+    for (int i = 0; i < bufSize; i++) {
+        src[i] = dest[i];
+    }
     int dest_i = 0;
     for (int i = 0; i < bufSize; i++) {
-        if (src[i] == 0x7d) {
+        if (src[i] == 0x7d && i + 1 < bufSize) {
             i++;
             if (src[i] == 0x5e) {
                 dest[dest_i] = 0x7e;

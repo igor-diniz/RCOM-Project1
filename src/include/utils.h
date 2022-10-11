@@ -16,4 +16,4 @@ int stuff(const unsigned char *src, unsigned char* dest, int bufSize);
  * @param bufSize size of the buffer.
  * @return size of the new buffer.
 */
-int deStuff(const unsigned char *src, unsigned char* dest, int bufSize);
+int deStuff(unsigned char *dest, int bufSize);

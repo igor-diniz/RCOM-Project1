@@ -118,6 +118,26 @@ int llopen(LinkLayer connectionParameters)
     return -1;
 }
 
+int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
+    unsigned char copy[BUF_SIZE + 1] = {0};
+    dest[0] = FLAG;
+    dest[1] = ADDR_T;
+    dest[2] = frameNumber;
+    dest[3] = ADDR_T ^ frameNumber;
+    unsigned char bcc = 0;
+    for (int j = 0; j < bufSize; j++) {
+        bcc ^= buf[j];
+    }
+    bufSize = stuff(buf, copy, bufSize);
+    int i = 0;
+    for (; i < bufSize; i++) {
+        dest[i + 4] = copy[i];
+    }
+    dest[i] = bcc;  
+    dest[i + 1] = FLAG;
+    return i + 2;
+}
+
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
@@ -125,25 +145,16 @@ int llwrite(const unsigned char *buf, int bufSize)
 {
     unsigned char tmp[BUF_SIZE + 1] = {0};
     unsigned char buffer[BUF_SIZE + 1] = {0};
-    unsigned char copy[BUF_SIZE + 1] = {0};
-    alarmTriggered = 0;
+    numTries = 0;
+
+    bufSize = prepareWrite(buf, tmp, bufSize);
+
     int nbytes = 0;
-    tmp[0] = FLAG;
-    tmp[1] = ADDR_T;
-    tmp[2] = frameNumber;
-    tmp[3] = ADDR_T ^ frameNumber;
-    bufSize = stuff(buf, copy, bufSize);
-    int i = 0;
-    for (; i < bufSize; i++) {
-        tmp[i + 4] = copy[i];
-    }
-    tmp[i] = 0;  //TODO bcc
-    tmp[i + 1] = FLAG;
-    tmp[i + 2] = '\0';
+    alarmTriggered = 0;
 
     while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
         if (!alarmTriggered) {
-            nbytes = write(fd, tmp, i);
+            nbytes = write(fd, tmp, bufSize);
             setState(START);
             alarm(parameters.timeout);
             alarmTriggered = 1;
@@ -151,9 +162,15 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
         read(fd, buffer, 1);
         //TODO check for REJ
-        if (stateStep(buffer[0], RR, ADDR_T)) {
+        int step = stateStep(buffer[0], RR, ADDR_T);
+        if (step == 1) {
             printf("Received RR frame.\n");
+            frameNumber++;
             return 0;
+        }
+        else if (step == 2) {
+            printf("Received REJ frame.\n");
+            alarmTriggered = 0;
         }
     }
     return 0;
@@ -163,8 +180,17 @@ int llwrite(const unsigned char *buf, int bufSize)
 // LLREAD
 ////////////////////////////////////////////////
 int llread(unsigned char *packet) {
-    sleep(2);
-    writeCtrlFrame(fd, RR, ADDR_T);
+    unsigned char buffer[BUF_SIZE + 1] = {0};
+    while (getState() != STOP) {
+        read(fd, buffer, 1);
+        int step = stateStep(buffer[0], frameNumber, ADDR_T);
+        if (step == 1) {
+            getData(packet);
+            writeCtrlFrame(fd, RR, ADDR_T);
+            printf("Sent RR frame.\n");
+            return 0;
+        }
+    }
     return 0;
 }
 
@@ -173,6 +199,48 @@ int llread(unsigned char *packet) {
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
+    /*unsigned char buffer[BUF_SIZE + 1] = {0};
+    numTries = 0;
+    alarmTriggered = 0;
+    int received = 0;
+
+    if (parameters.role == LlTx) {
+        while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
+            if (!alarmTriggered) {
+                if (!received) {
+                    writeCtrlFrame(fd, DISC, ADDR_T);
+                    printf("Sent DISC frame.\n");
+                }
+                else {
+                    writeCtrlFrame(fd, UA, ADDR_T);
+                    printf("Sent UA frame.\n");
+                }
+                setState(START);
+                alarm(parameters.timeout);
+                alarmTriggered = 1;
+            }
+            read(fd, buffer, 1);
+            if (stateStep(buffer[0], DISC, ADDR_T)) {
+                printf("Received DISC frame.\n");
+                received = 1;
+                numTries = 0;
+                alarmTriggered = 0;
+                alarm(3);
+            }
+        }
+    }
+    else if (parameters.role == LlRx) {
+        while (getState() != STOP) {
+            read(fd, buffer, 1);
+            if (stateStep(buffer[0], DISC, ADDR_T)) {
+                printf("Read DISC frame.\n");
+                writeCtrlFrame(fd, DISC, ADDR_T);
+                printf("Sent DISC frame.\n");
+                break;
+            };
+        }
+    }
+    return -1;*/
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {

@@ -6,6 +6,7 @@
 
 #define SET 0X03
 #define UA 0X07
+#define DISC 0x0B
 #define RR 0x05
 #define REJ 0x01
 
@@ -17,6 +18,8 @@ typedef enum {
     A_RCV,
     C_RCV,
     BCC_OK,
+    DATA,
+    BCC2_OK,
     STOP
 } State;
 
@@ -50,3 +53,9 @@ void setState(State new_state);
  * @return Current state.
 */
 State getState();
+
+/**
+ * Get the data read from the last frame.
+ * @return Data read from last frame.
+*/
+unsigned char* getData();
