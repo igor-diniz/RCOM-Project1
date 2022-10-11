@@ -2,6 +2,7 @@
 
 #include "application_layer.h"
 #include "link_layer.h"
+#include "utils.h"
 
 #define BUF_SIZE 256
 
