@@ -24,7 +24,9 @@ int setUp(const char *serialPort, const char *role, int baudRate,
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
-    setUp(serialPort, role, baudRate, nTries, timeout);
+    if (setUp(serialPort, role, baudRate, nTries, timeout) == -1) {
+        printf("Couldn't establish connection.\n");
+    }
 
     llclose(1);
 }

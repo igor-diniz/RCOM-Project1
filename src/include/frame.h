@@ -17,8 +17,32 @@ typedef enum {
     STOP
 } State;
 
-int readFrame(int fd, unsigned char expected, unsigned char addr);
+/**
+ * Handle state changes for data read.
+ * @param buf Last byte read.
+ * @param expected Expected control character.
+ * @param addr Expected address field.
+ * @return 1 if the read is the frame is complete, zero otherwise.
+*/
+int stateStep(unsigned char buf, unsigned char expected, unsigned char addr);
 
+/**
+ * Write a frame to the port.
+ * @param fd Serial port's file descriptor.
+ * @param ctrl Control char to be written.
+ * @param addr Address field to be written.
+ * @return Number of bytes written.
+*/
 int writeFrame(int fd, unsigned char ctrl, unsigned char addr);
 
+/**
+ * Change the current state.
+ * @param new_state New state.
+*/
 void setState(State new_state);
+
+/**
+ * Get the current state.
+ * @return Current state.
+*/
+State getState();

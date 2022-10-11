@@ -10,7 +10,8 @@ static struct termios newtio;
 
 static LinkLayer parameters;
 
-static int numTries = -1;
+static int numTries;
+static int alarmTriggered;
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
@@ -18,15 +19,7 @@ static int numTries = -1;
 #define BUF_SIZE 256
 
 void alarmHandler(int signum) {
-    if (numTries < parameters.nRetransmissions) {
-        writeFrame(fd, SET, ADDR_T);
-        alarm(3);
-        printf("Sent SET frame.\n");
-        sleep(1);
-    }
-    else {
-        setState(STOP);
-    }
+    alarmTriggered = 0;
     numTries++;
 }
 
@@ -56,7 +49,7 @@ int openPort(LinkLayer connectionParameters) {
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = 0; // Inter-character timer unused
-    newtio.c_cc[VMIN] = 1;  // Blocking read until 1 char received
+    newtio.c_cc[VMIN] = 0;  // Blocking read until 1 char received
 
     // VTIME e VMIN should be changed in order to protect with a
     // timeout the reception of the following character(s)
@@ -85,30 +78,41 @@ int openPort(LinkLayer connectionParameters) {
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters)
 {
+    unsigned char buffer[BUF_SIZE + 1] = {0};
     parameters = connectionParameters;
     openPort(connectionParameters);
     signal(SIGALRM, alarmHandler);
     numTries = 0;
+    alarmTriggered = 0;
 
     if (connectionParameters.role == LlTx) {
-        writeFrame(fd, SET, ADDR_T);
-        alarm(3);
-        printf("Sent SET frame.\n");
-        sleep(1);
-        if (readFrame(fd, UA, ADDR_T))
-            printf("Read UA frame.\n");
-        else {
-            return -1;
+        while ((numTries < connectionParameters.nRetransmissions) && getState() != STOP) {
+            if (!alarmTriggered) {
+                writeFrame(fd, SET, ADDR_T);
+                setState(START);
+                alarm(3);
+                alarmTriggered = 1;
+                printf("Sent SET frame.\n");
+            }
+            read(fd, buffer, 1);
+            if (stateStep(buffer[0], UA, ADDR_T)) {
+                printf("Received UA frame.\n");
+                return 0;
+            }
         }
     }
     else if (connectionParameters.role == LlRx) {
-        if (readFrame(fd, SET, ADDR_T)) {
-            printf("Read SET frame.\n");
-            writeFrame(fd, UA, ADDR_T);
-            printf("Sent UA frame.\n");
+        while (getState() != STOP) {
+            read(fd, buffer, 1);
+            if (stateStep(buffer[0], SET, ADDR_T)) {
+                printf("Read SET frame.\n");
+                writeFrame(fd, UA, ADDR_T);
+                printf("Sent UA frame.\n");
+                return 0;
+            };
         }
     }
-    return 0;
+    return -1;
 }
 
 ////////////////////////////////////////////////
