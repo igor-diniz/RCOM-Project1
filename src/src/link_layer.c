@@ -199,22 +199,15 @@ int llread(unsigned char *packet) {
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
-    /*unsigned char buffer[BUF_SIZE + 1] = {0};
+    unsigned char buffer[BUF_SIZE + 1] = {0};
     numTries = 0;
     alarmTriggered = 0;
-    int received = 0;
 
     if (parameters.role == LlTx) {
         while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
             if (!alarmTriggered) {
-                if (!received) {
-                    writeCtrlFrame(fd, DISC, ADDR_T);
-                    printf("Sent DISC frame.\n");
-                }
-                else {
-                    writeCtrlFrame(fd, UA, ADDR_T);
-                    printf("Sent UA frame.\n");
-                }
+                writeCtrlFrame(fd, DISC, ADDR_T);
+                printf("Sent DISC frame.\n");
                 setState(START);
                 alarm(parameters.timeout);
                 alarmTriggered = 1;
@@ -222,25 +215,29 @@ int llclose(int showStatistics)
             read(fd, buffer, 1);
             if (stateStep(buffer[0], DISC, ADDR_T)) {
                 printf("Received DISC frame.\n");
-                received = 1;
-                numTries = 0;
-                alarmTriggered = 0;
-                alarm(3);
+                writeCtrlFrame(fd, UA, ADDR_T);
+                printf("Sent UA frame.\n");
+                return 0;
             }
         }
     }
     else if (parameters.role == LlRx) {
-        while (getState() != STOP) {
-            read(fd, buffer, 1);
-            if (stateStep(buffer[0], DISC, ADDR_T)) {
-                printf("Read DISC frame.\n");
+        while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
+            if (!alarmTriggered) {
                 writeCtrlFrame(fd, DISC, ADDR_T);
                 printf("Sent DISC frame.\n");
-                break;
-            };
+                setState(START);
+                alarm(parameters.timeout);
+                alarmTriggered = 1;
+            }
+            read(fd, buffer, 1);
+            if (stateStep(buffer[0], UA, ADDR_T)) {
+                printf("Received UA frame.\n");
+                return 0;
+            }
         }
     }
-    return -1;*/
+    return -1;
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
