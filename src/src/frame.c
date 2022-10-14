@@ -7,6 +7,7 @@ static int data_idx = 0;
 
 int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 {
+    unsigned char bcc;
     switch (state)
     {
     case START:
@@ -74,7 +75,7 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
         break;
 
     case BCC2_OK:
-        unsigned char bcc = 0x00;
+        bcc = 0x00;
         deStuff(data , data_idx);
         for (int i = 0; i < data_idx; i++) {
             bcc ^= data[i];
