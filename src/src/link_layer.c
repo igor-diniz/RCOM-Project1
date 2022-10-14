@@ -152,6 +152,7 @@ int llwrite(const unsigned char *buf, int bufSize)
 
     int nbytes = 0;
     alarmTriggered = 0;
+    alarm(0);
 
     while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
         if (!alarmTriggered) {
@@ -189,6 +190,7 @@ int llread(unsigned char *packet) {
             if (step == 1) {
                 getData(packet);
                 writeCtrlFrame(fd, RR | (frameNumber << 6), ADDR_T);
+                frameNumber = !frameNumber;
                 printf("Sent RR frame.\n");
                 return 0;
             }
@@ -210,6 +212,7 @@ int llclose(int showStatistics)
     unsigned char buffer[BUF_SIZE + 1] = {0};
     numTries = 0;
     alarmTriggered = 0;
+    int received = 0;
 
     if (parameters.role == LlTx) {
         while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
@@ -231,7 +234,7 @@ int llclose(int showStatistics)
     }
     else if (parameters.role == LlRx) {
         while ((numTries < parameters.nRetransmissions) && getState() != STOP) {
-            if (!alarmTriggered) {
+            if (!alarmTriggered && received) {
                 writeCtrlFrame(fd, DISC, ADDR_T);
                 printf("Sent DISC frame.\n");
                 setState(START);
@@ -239,9 +242,17 @@ int llclose(int showStatistics)
                 alarmTriggered = 1;
             }
             read(fd, buffer, 1);
-            if (stateStep(buffer[0], UA, ADDR_T)) {
-                printf("Received UA frame.\n");
-                break;
+            if (received) {
+                if (stateStep(buffer[0], UA, ADDR_T)) {
+                    printf("Received UA frame.\n");
+                    break;
+                }
+            }
+            else {
+                if (stateStep(buffer[0], DISC, ADDR_T)) {
+                    printf("Received DISC frame.\n");
+                    received = 1;
+                }
             }
         }
     }

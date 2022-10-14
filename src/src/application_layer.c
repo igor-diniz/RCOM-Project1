@@ -37,8 +37,17 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     if (parameters.role == LlTx) {
         llwrite(buf, 10);
+        llwrite(buf, 10);
+        llwrite(buf, 10);
+        llwrite(buf, 10);
     }
     else if (parameters.role == LlRx) {
+        llread(buf);
+        printf("bytes read: \n %s\n", buf);
+        llread(buf);
+        printf("bytes read: \n %s\n", buf);
+        llread(buf);
+        printf("bytes read: \n %s\n", buf);
         llread(buf);
         printf("bytes read: \n %s\n", buf);
     }
