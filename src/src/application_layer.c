@@ -29,6 +29,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Couldn't establish connection.\n");
     }
 
+
     unsigned char buf[BUFFER_SIZE + 1] = {0};
     for (int i = 0; i < 10; i++) {
         buf[i] = 'a' + i;
@@ -39,6 +40,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
     else if (parameters.role == LlRx) {
         llread(buf);
+        printf("bytes read: \n %s\n", buf);
     }
 
     llclose(1);

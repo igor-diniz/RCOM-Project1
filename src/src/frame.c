@@ -4,14 +4,12 @@
 static int state = START;
 static unsigned char data[BUF_SIZE + 1] = {0};
 static int data_idx = 0;
-static unsigned char last_ctrl;
 
 int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 {
     switch (state)
     {
     case START:
-        data_idx = 0;
         if (buf == FLAG)
         {
             state = FLAG_RCV;
@@ -35,6 +33,10 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
         }
         else if (buf == FLAG)
             state = FLAG_RCV;
+        else if (isDuplicate(buf, expected)) {
+            state = START;
+            return 1; // discard the data
+        }
         else
             state = START;
         break;
@@ -42,7 +44,6 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
     case C_RCV:
         if (buf == (addr ^ expected)) {
             state = BCC_OK;
-            last_ctrl = buf;
         }
         else if (buf == FLAG)
             state = FLAG_RCV;
@@ -51,19 +52,13 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
         break;
 
     case BCC_OK:
-        if (buf == FLAG)
+        if (buf == FLAG){
             return 1;
+
+        }
         else {
-            if (last_ctrl == expected) {
-                state = DATA;
-            }
-            else if (expected == RR && last_ctrl == REJ) {
-                return 2;
-            }
-            else if (last_ctrl < expected) { // duplicate
-                return 1;
-            }
-            else return 0;
+            data_idx = 0;
+            state = DATA;
         }
         break;
 
@@ -81,13 +76,16 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
     case BCC2_OK:
         unsigned char bcc = 0x00;
         deStuff(data , data_idx);
-        for (int i = 0; i < data_idx - 1; i++) {
+        for (int i = 0; i < data_idx; i++) {
             bcc ^= data[i];
         }
+
         if (data[data_idx - 1] == bcc) {
+            state = START;
             return 1;
         }
         else {
+            state = START;
             return 2;
         }
         break;
@@ -122,4 +120,13 @@ State getState()
 
 unsigned char* getData() {
     return data;
+}
+
+int isDuplicate(unsigned char buf, unsigned char expected) {
+    if (expected != 0 && expected != (1 << 6)) 
+        return 0;
+    if (buf == expected) return 0;
+    if (expected == 0 && buf == (1 << 6)) return 1;
+    if (expected == (1 << 6) && buf == 0) return 1;
+    return 0;
 }

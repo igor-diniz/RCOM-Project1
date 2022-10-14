@@ -1,4 +1,5 @@
 #include "link_layer.h"
+#include <stdio.h>
 
 #define FLAG 0x7E
 #define ADDR_T 0X03
@@ -59,3 +60,5 @@ State getState();
  * @return Data read from last frame.
 */
 unsigned char* getData();
+
+int isDuplicate(unsigned char buf, unsigned char expected);

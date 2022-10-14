@@ -122,8 +122,8 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     unsigned char copy[BUF_SIZE + 1] = {0};
     dest[0] = FLAG;
     dest[1] = ADDR_T;
-    dest[2] = frameNumber;
-    dest[3] = ADDR_T ^ frameNumber;
+    dest[2] = frameNumber << 6;
+    dest[3] = ADDR_T ^ dest[2];
     unsigned char bcc = 0;
     for (int j = 0; j < bufSize; j++) {
         bcc ^= buf[j];
@@ -147,6 +147,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     unsigned char buffer[BUF_SIZE + 1] = {0};
     numTries = 0;
 
+
     bufSize = prepareWrite(buf, tmp, bufSize);
 
     int nbytes = 0;
@@ -161,11 +162,10 @@ int llwrite(const unsigned char *buf, int bufSize)
             printf("%d bytes written.\n", nbytes);
         }
         read(fd, buffer, 1);
-        //TODO check for REJ
-        int step = stateStep(buffer[0], RR, ADDR_T);
+        int step = stateStep(buffer[0], RR | (frameNumber << 6), ADDR_T);
         if (step == 1) {
             printf("Received RR frame.\n");
-            frameNumber++;
+            frameNumber = !frameNumber;
             return 0;
         }
         else if (step == 2) {
@@ -181,14 +181,22 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet) {
     unsigned char buffer[BUF_SIZE + 1] = {0};
+    int step = 0;
+    setState(START);
     while (getState() != STOP) {
-        read(fd, buffer, 1);
-        int step = stateStep(buffer[0], frameNumber, ADDR_T);
-        if (step == 1) {
-            getData(packet);
-            writeCtrlFrame(fd, RR, ADDR_T);
-            printf("Sent RR frame.\n");
-            return 0;
+        if (read(fd, buffer, 1)) {
+            step = stateStep(buffer[0], frameNumber << 6, ADDR_T);
+            if (step == 1) {
+                getData(packet);
+                writeCtrlFrame(fd, RR | (frameNumber << 6), ADDR_T);
+                printf("Sent RR frame.\n");
+                return 0;
+            }
+            else if (step == 2) {
+                writeCtrlFrame(fd, REJ | (frameNumber << 6), ADDR_T);
+                printf("Sent REJ frame.\n");
+            }
+            step = 0;
         }
     }
     return 0;
@@ -217,7 +225,7 @@ int llclose(int showStatistics)
                 printf("Received DISC frame.\n");
                 writeCtrlFrame(fd, UA, ADDR_T);
                 printf("Sent UA frame.\n");
-                return 0;
+                break;
             }
         }
     }
@@ -233,11 +241,10 @@ int llclose(int showStatistics)
             read(fd, buffer, 1);
             if (stateStep(buffer[0], UA, ADDR_T)) {
                 printf("Received UA frame.\n");
-                return 0;
+                break;
             }
         }
     }
-    return -1;
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
@@ -247,5 +254,5 @@ int llclose(int showStatistics)
 
     close(fd);
 
-    return 1;
+    return 0;
 }
