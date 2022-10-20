@@ -134,6 +134,7 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
         dest[i + 4] = copy[i];
         //printf("%x\n", dest[i]);
     }
+    i += 4;
     dest[i] = bcc; //printf("%x\n", dest[i]);
     dest[i + 1] = FLAG; //printf("%x\n", dest[i + 1]);
     return i + 2;
@@ -163,8 +164,8 @@ int llwrite(const unsigned char *buf, int bufSize)
             alarmTriggered = 1;
             printf("%d bytes written.\n", nbytes);
 
-            for(int i = 0; i < nbytes; i++)
-                printf("%x\n", tmp[i]);
+            //for(int i = 0; i < nbytes; i++)
+             //   printf("%x\n", tmp[i]);
         }
         read(fd, buffer, 1);
         int step = stateStep(buffer[0], RR | (frameNumber << 6), ADDR_T);
@@ -190,7 +191,6 @@ int llread(unsigned char *packet) {
     setState(START);
     while (getState() != STOP) {
         if (read(fd, buffer, 1)) {
-            printf("%x\n", buffer[0]);
             step = stateStep(buffer[0], frameNumber << 6, ADDR_T);
             if (step == 1) {
                 getData(packet);

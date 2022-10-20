@@ -55,16 +55,17 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
     case BCC_OK:
         if (buf == FLAG){
             return 1;
-
         }
         else {
             data_idx = 0;
+            data[data_idx] = buf;
+            data_idx++;
             state = DATA;
         }
         break;
 
     case DATA:
-        if (buf == FLAG) {
+        if (buf == FLAG) { // finished
             state = BCC2_OK;
             data_idx--;
         }
@@ -81,7 +82,7 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
             bcc ^= data[i];
         }
 
-        if (data[data_idx - 1] == bcc) {
+        if (data[data_idx] == bcc) {
             state = START;
             return 1;
         }

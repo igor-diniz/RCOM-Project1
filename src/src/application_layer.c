@@ -6,7 +6,7 @@
 #include "frame.h"
 
 #define BUF_SIZE 256
-#define MAX_CHUNK_SIZE 8
+#define MAX_CHUNK_SIZE 128
 
 static LinkLayer parameters;
 
@@ -54,13 +54,16 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     // Receiver
     else if (parameters.role == LlRx) {
-        int fd = open(filename, O_WRONLY | O_CREAT);
+        int fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXO);
         if (fd < 0) {
             printf("%s cannot be opened \n", filename);
             exit(-1);
         }
 
-        llread(buf);
+        int i = 0;
+        while (i < 20) {
+            llread(buf);
+        }
     }
 
     llclose(1);
