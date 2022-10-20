@@ -1,12 +1,12 @@
 // Application layer protocol implementation
 
-#include "include/application_layer.h"
-#include "include/link_layer.h"
-#include "include/utils.h"
-#include "include/frame.h"
+#include "application_layer.h"
+#include "link_layer.h"
+#include "utils.h"
+#include "frame.h"
 
 #define BUF_SIZE 256
-#define MAX_CHUNK_SIZE 128
+#define MAX_CHUNK_SIZE 8
 
 static LinkLayer parameters;
 
@@ -31,18 +31,18 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Couldn't establish connection.\n");
     }
 
-    // Openning {filename} and verifying if any error occurred
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-        printf("%s Cannot be opened \n", filename);
-        exit(-1);
-    }
-
     int nbytes;
-    char buf[BUF_SIZE];
+    unsigned char buf[BUF_SIZE];
 
     // Transmitter
     if (parameters.role == LlTx) {
+        // Openning {filename} and verifying if any error occurred
+        int fd = open(filename, O_RDONLY);
+        if (fd < 0) {
+            printf("%s cannot be opened \n", filename);
+            exit(-1);
+        }
+
         while ((nbytes = read(fd, buf, MAX_CHUNK_SIZE)) != 0){ // zero indicates end of file
             if(nbytes == -1){
                 printf("An error occurred in the reading of the %s", filename);
@@ -54,9 +54,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     // Receiver
     else if (parameters.role == LlRx) {
-        while(getState() != STOP){
-            llread(buf);
-        }  
+        int fd = open(filename, O_WRONLY | O_CREAT);
+        if (fd < 0) {
+            printf("%s cannot be opened \n", filename);
+            exit(-1);
+        }
+
+        llread(buf);
     }
 
     llclose(1);

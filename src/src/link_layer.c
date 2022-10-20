@@ -120,10 +120,10 @@ int llopen(LinkLayer connectionParameters)
 
 int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     unsigned char copy[BUF_SIZE + 1] = {0};
-    dest[0] = FLAG;
-    dest[1] = ADDR_T;
-    dest[2] = frameNumber << 6;
-    dest[3] = ADDR_T ^ dest[2];
+    dest[0] = FLAG; //printf("%x\n", dest[0]);
+    dest[1] = ADDR_T; //printf("%x\n", dest[1]);
+    dest[2] = frameNumber << 6; //printf("%x\n", dest[2]);
+    dest[3] = ADDR_T ^ dest[2]; //printf("%x\n", dest[3]);
     unsigned char bcc = 0;
     for (int j = 0; j < bufSize; j++) {
         bcc ^= buf[j];
@@ -132,9 +132,10 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     int i = 0;
     for (; i < bufSize; i++) {
         dest[i + 4] = copy[i];
+        //printf("%x\n", dest[i]);
     }
-    dest[i] = bcc;  
-    dest[i + 1] = FLAG;
+    dest[i] = bcc; //printf("%x\n", dest[i]);
+    dest[i + 1] = FLAG; //printf("%x\n", dest[i + 1]);
     return i + 2;
 }
 
@@ -161,6 +162,9 @@ int llwrite(const unsigned char *buf, int bufSize)
             alarm(parameters.timeout);
             alarmTriggered = 1;
             printf("%d bytes written.\n", nbytes);
+
+            for(int i = 0; i < nbytes; i++)
+                printf("%x\n", tmp[i]);
         }
         read(fd, buffer, 1);
         int step = stateStep(buffer[0], RR | (frameNumber << 6), ADDR_T);
@@ -186,6 +190,7 @@ int llread(unsigned char *packet) {
     setState(START);
     while (getState() != STOP) {
         if (read(fd, buffer, 1)) {
+            printf("%x\n", buffer[0]);
             step = stateStep(buffer[0], frameNumber << 6, ADDR_T);
             if (step == 1) {
                 getData(packet);
