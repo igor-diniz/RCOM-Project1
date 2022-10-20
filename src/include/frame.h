@@ -20,7 +20,6 @@ typedef enum {
     C_RCV,
     BCC_OK,
     DATA,
-    BCC2_OK,
     STOP
 } State;
 

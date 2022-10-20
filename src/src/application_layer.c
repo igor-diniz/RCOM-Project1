@@ -43,10 +43,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             exit(-1);
         }
 
+        int i = 0;
+
         while ((nbytes = read(fd, buf, MAX_CHUNK_SIZE)) != 0){ // zero indicates end of file
             if(nbytes == -1){
                 printf("An error occurred in the reading of the %s", filename);
             }
+
+            i++;
         
             llwrite(buf, nbytes);
         }
@@ -61,8 +65,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
 
         int i = 0;
-        while (i < 20) {
+        while (i < 86) {
             llread(buf);
+            i++;
         }
     }
 

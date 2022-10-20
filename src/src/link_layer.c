@@ -164,8 +164,10 @@ int llwrite(const unsigned char *buf, int bufSize)
             alarmTriggered = 1;
             printf("%d bytes written.\n", nbytes);
 
-            //for(int i = 0; i < nbytes; i++)
-             //   printf("%x\n", tmp[i]);
+            /*printf("written->");
+            for(int i = 0; i < nbytes; i++)
+                printf("%x;", tmp[i]);
+            printf("\n");*/
         }
         read(fd, buffer, 1);
         int step = stateStep(buffer[0], RR | (frameNumber << 6), ADDR_T);

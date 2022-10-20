@@ -66,29 +66,28 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 
     case DATA:
         if (buf == FLAG) { // finished
-            state = BCC2_OK;
             data_idx--;
+            bcc = 0x00;
+            int bcc_rcv = data[data_idx];
+            data_idx = deStuff(data , data_idx);
+            for (int i = 0; i < data_idx; i++) {
+                bcc ^= data[i];
+            }
+
+            if (bcc_rcv == bcc) {
+                state = START;
+                return 1;
+            }
+            else {
+                state = START;
+                return 2;
+            }
+            break;
+
         }
         else {
             data[data_idx] = buf;
             data_idx++;
-        }
-        break;
-
-    case BCC2_OK:
-        bcc = 0x00;
-        deStuff(data , data_idx);
-        for (int i = 0; i < data_idx; i++) {
-            bcc ^= data[i];
-        }
-
-        if (data[data_idx] == bcc) {
-            state = START;
-            return 1;
-        }
-        else {
-            state = START;
-            return 2;
         }
         break;
 
