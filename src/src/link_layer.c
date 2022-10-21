@@ -191,6 +191,7 @@ int llread(unsigned char *packet) {
     setState(START);
     while (getState() != STOP) {
         if (read(fd, buffer, 1)) {
+
             step = stateStep(buffer[0], frameNumber << 6, ADDR_T);
             if (step == 1) {
                 getData(packet);
