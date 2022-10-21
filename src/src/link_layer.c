@@ -87,6 +87,7 @@ int llopen(LinkLayer connectionParameters)
     signal(SIGALRM, alarmHandler);
     numTries = 0;
     alarmTriggered = 0;
+    frameNumber = (connectionParameters.role == LlRx);
 
     if (connectionParameters.role == LlTx) {
         while ((numTries < connectionParameters.nRetransmissions) && getState() != STOP) {
@@ -122,7 +123,7 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     unsigned char copy[BUF_SIZE + 1] = {0};
     dest[0] = FLAG; //printf("%x\n", dest[0]);
     dest[1] = ADDR_T; //printf("%x\n", dest[1]);
-    dest[2] = frameNumber << 6; //printf("%x\n", dest[2]);
+    dest[2] = frameNumber << I_CTRL_SHIFT; //printf("%x\n", dest[2]);
     dest[3] = ADDR_T ^ dest[2]; //printf("%x\n", dest[3]);
     unsigned char bcc = 0;
     for (int j = 0; j < bufSize; j++) {
@@ -163,12 +164,9 @@ int llwrite(const unsigned char *buf, int bufSize)
             alarm(parameters.timeout);
             alarmTriggered = 1;
             printf("%d bytes written.\n", nbytes);
-
-            //for(int i = 0; i < nbytes; i++)
-             //   printf("%x\n", tmp[i]);
         }
         read(fd, buffer, 1);
-        int step = stateStep(buffer[0], RR | (frameNumber << 6), ADDR_T);
+        int step = stateStep(buffer[0], RR | (!frameNumber << R_CTRL_SHIFT), ADDR_T);
         if (step == 1) {
             printf("Received RR frame.\n");
             frameNumber = !frameNumber;
@@ -179,7 +177,7 @@ int llwrite(const unsigned char *buf, int bufSize)
             alarmTriggered = 0;
         }
     }
-    return 0;
+    return nbytes;
 }
 
 ////////////////////////////////////////////////
@@ -187,21 +185,22 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet) {
     unsigned char buffer[BUF_SIZE + 1] = {0};
+    int size = 0;
     int step = 0;
     setState(START);
     while (getState() != STOP) {
         if (read(fd, buffer, 1)) {
-
-            step = stateStep(buffer[0], frameNumber << 6, ADDR_T);
-            if (step == 1) {
-                getData(packet);
-                writeCtrlFrame(fd, RR | (frameNumber << 6), ADDR_T);
-                frameNumber = !frameNumber;
+            unsigned char expected = (!frameNumber) << I_CTRL_SHIFT;
+            step = stateStep(buffer[0], expected, ADDR_T);
+            if (step == 1 || step == 3) {
+                if (step == 1) size = getData(packet);
+                writeCtrlFrame(fd, RR | (frameNumber << R_CTRL_SHIFT), ADDR_T);
                 printf("Sent RR frame.\n");
+                if (step == 1) frameNumber = !frameNumber;
                 return 0;
             }
             else if (step == 2) {
-                writeCtrlFrame(fd, REJ | (frameNumber << 6), ADDR_T);
+                writeCtrlFrame(fd, REJ | (frameNumber << R_CTRL_SHIFT), ADDR_T);
                 printf("Sent REJ frame.\n");
             }
             step = 0;
