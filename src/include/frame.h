@@ -11,6 +11,9 @@
 #define RR 0x05
 #define REJ 0x01
 
+#define I_CTRL_SHIFT 6
+#define R_CTRL_SHIFT 7
+
 #define BUF_SIZE 256
 
 typedef enum {
@@ -29,7 +32,7 @@ typedef enum {
  * @param buf Last byte read.
  * @param expected Expected control character.
  * @param addr Expected address field.
- * @return 1 if the read is the frame is complete, zero otherwise.
+ * @return 1 if the reading of the frame is complete, zero otherwise. Returns 2 for Rejected frames and 3 for duplicate frames.
 */
 int stateStep(unsigned char buf, unsigned char expected, unsigned char addr);
 
@@ -60,4 +63,10 @@ State getState();
 */
 unsigned char* getData();
 
-int isDuplicate(unsigned char buf, unsigned char expected);
+/**
+ * Test the control packet for its validity.
+ * @param buf The receiving buffer.
+ * @param expected Expected control byte.
+ * @return returns 1 if the control is valid, 0 otherwise. Return 2 if the frame is a duplicate and -1 for error.
+*/
+int testCtrl(unsigned char buf, unsigned char expected);

@@ -29,17 +29,20 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
         break;
 
     case A_RCV:
-        if (buf == expected) {
+        if (buf == FLAG) {
+            state = FLAG_RCV;
+        }
+        int test = testCtrl(buf, expected);
+        if (test == 0 || test == -1) { // not valid
+            state = START;
+        }
+        else if (test == 1) { // Valid
             state = C_RCV;
         }
-        else if (buf == FLAG)
-            state = FLAG_RCV;
-        else if (isDuplicate(buf, expected)) {
+        else { // duplicate
             state = START;
-            return 1; // discard the data
+            return 3;
         }
-        else
-            state = START;
         break;
 
     case C_RCV:
@@ -123,11 +126,11 @@ unsigned char* getData() {
     return data;
 }
 
-int isDuplicate(unsigned char buf, unsigned char expected) {
-    if (expected != 0 && expected != (1 << 6)) 
-        return 0;
-    if (buf == expected) return 0;
-    if (expected == 0 && buf == (1 << 6)) return 1;
-    if (expected == (1 << 6) && buf == 0) return 1;
-    return 0;
+int testCtrl(unsigned char buf, unsigned char expected) {
+    if (expected != 0 && expected != (1 << I_CTRL_SHIFT)) 
+        return (buf == expected);
+    if (buf == expected) return 1;
+    if (expected == 0 && buf == (1 << I_CTRL_SHIFT)) return 2;
+    if (expected == (1 << I_CTRL_SHIFT) && buf == 0) return 2;
+    return -1;
 }
