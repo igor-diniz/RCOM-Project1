@@ -193,11 +193,13 @@ int llread(unsigned char *packet) {
             unsigned char expected = (!frameNumber) << I_CTRL_SHIFT;
             step = stateStep(buffer[0], expected, ADDR_T);
             if (step == 1 || step == 3) {
-                if (step == 1) size = getData(packet);
+                if (step == 1) {
+                    size = getData(packet);
+                }
                 writeCtrlFrame(fd, RR | (frameNumber << R_CTRL_SHIFT), ADDR_T);
                 printf("Sent RR frame.\n");
                 if (step == 1) frameNumber = !frameNumber;
-                return 0;
+                return size;
             }
             else if (step == 2) {
                 writeCtrlFrame(fd, REJ | (frameNumber << R_CTRL_SHIFT), ADDR_T);
@@ -206,7 +208,7 @@ int llread(unsigned char *packet) {
             step = 0;
         }
     }
-    return 0;
+    return size;
 }
 
 ////////////////////////////////////////////////

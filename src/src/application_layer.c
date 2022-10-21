@@ -94,10 +94,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             llwrite(buf, nbytes);
         }
     }
-
-    // Receiver
-    else if (parameters.role == LlRx) {
-        int fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXO);
+    else if (parameters.role == LlRx) {// Receiver
+        int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXO);
         //int fileSize = 0;
         //char* rcvFilename[BUFFER_SIZE] = {0};
         if (fd < 0) {
@@ -105,9 +103,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             exit(-1);
         }
 
-        while (true) {
+        int n = 0;
+        while (n < 86) {
             int llSize = llread(buf);
             nbytes = write(fd, buf, llSize);
+            printf("-- to file -> %d bytes\n", nbytes);
+            n++;
 
         /*if (buf[0] == 2) { // start
             int i = 1;
@@ -133,6 +134,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 }
             }
         }*/
+        }
     }
 
     llclose(1);
