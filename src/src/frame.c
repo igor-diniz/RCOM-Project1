@@ -122,8 +122,11 @@ State getState()
     return state;
 }
 
-unsigned char* getData() {
-    return data;
+int getData(unsigned char* dest) {
+    for (int i = 0; i < data_idx; i++) {
+        dest[i] = data[i];
+    }
+    return data_idx;
 }
 
 int testCtrl(unsigned char buf, unsigned char expected) {

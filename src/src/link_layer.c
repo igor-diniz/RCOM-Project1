@@ -185,6 +185,7 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet) {
     unsigned char buffer[BUF_SIZE + 1] = {0};
+    int size = 0;
     int step = 0;
     setState(START);
     while (getState() != STOP) {
@@ -192,7 +193,7 @@ int llread(unsigned char *packet) {
             unsigned char expected = (!frameNumber) << I_CTRL_SHIFT;
             step = stateStep(buffer[0], expected, ADDR_T);
             if (step == 1 || step == 3) {
-                if (step == 1) getData(packet);
+                if (step == 1) size = getData(packet);
                 writeCtrlFrame(fd, RR | (frameNumber << R_CTRL_SHIFT), ADDR_T);
                 printf("Sent RR frame.\n");
                 if (step == 1) frameNumber = !frameNumber;

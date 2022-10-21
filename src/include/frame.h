@@ -59,9 +59,10 @@ State getState();
 
 /**
  * Get the data read from the last frame.
- * @return Data read from last frame.
+ * @param dest Destination of the frame data.
+ * @return Size in bytes of last frame.
 */
-unsigned char* getData();
+int getData(unsigned char* dest);
 
 /**
  * Test the control packet for its validity.
