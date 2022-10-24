@@ -93,6 +93,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         
             llwrite(buf, nbytes);
         }
+        close(fd);
     }
     else if (parameters.role == LlRx) {// Receiver
         int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXO);
@@ -103,11 +104,17 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             exit(-1);
         }
 
-        int n = 0;
-        while (n < 86) {
-            int llSize = llread(buf);
-            nbytes = write(fd, buf, llSize);
-            printf("-- to file -> %d bytes\n", nbytes);
+        int n = 0, llSize = 0;
+        while (llSize != -1) {
+            if (n == 50 && 0) {
+                printf("-------------------NOISE NOW-------------------\n");
+                sleep(2);
+            }
+            llSize = llread(buf);
+            if (llSize > 0) {
+                nbytes = write(fd, buf, llSize);
+                printf("-- to file -> %d bytes\n", nbytes);
+            }
             n++;
 
         /*if (buf[0] == 2) { // start
@@ -135,8 +142,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
         }*/
         }
+        close(fd);
     }
 
     llclose(1);
-    close(fd);
 }

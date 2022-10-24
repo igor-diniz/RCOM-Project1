@@ -16,7 +16,15 @@
 
 #define BUF_SIZE 256
 
-typedef enum {
+typedef enum Step {
+    CONTINUE, // the end of the frame has not yet been reached
+    COMPLETE, // the reading of the frame is complete
+    REJECTED, // the frame is rejected
+    DUPLICATE, // the frame is a duplicate
+    DISCONNECT // a DISC signal was sent
+} Step;
+
+typedef enum State {
     START,
     FLAG_RCV,
     A_RCV,
@@ -34,7 +42,7 @@ typedef enum {
  * @param addr Expected address field.
  * @return 1 if the reading of the frame is complete, zero otherwise. Returns 2 for Rejected frames and 3 for duplicate frames.
 */
-int stateStep(unsigned char buf, unsigned char expected, unsigned char addr);
+Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr);
 
 /**
  * Write a frame to the port.

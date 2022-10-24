@@ -2,10 +2,11 @@
 #include "utils.h"
 
 static int state = START;
+static int is_disc = 0;
 static unsigned char data[BUF_SIZE + 1] = {0};
 static int data_idx = 0;
 
-int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
+Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 {
     unsigned char bcc;
     switch (state)
@@ -29,24 +30,34 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
         break;
 
     case A_RCV:
+        is_disc = 0;
         if (buf == FLAG) {
             state = FLAG_RCV;
         }
-        int test = testCtrl(buf, expected);
-        if (test == 0 || test == -1) { // not valid
-            state = START;
-        }
-        else if (test == 1) { // Valid
+        else if (buf == DISC) {
+            is_disc = 1;
             state = C_RCV;
         }
-        else { // duplicate
-            state = START;
-            return 3;
+        else {
+            int test = testCtrl(buf, expected);
+            if (test == 0 || test == -1) { // not valid
+                state = START;
+            }
+            else if (test == 1) { // Valid
+                state = C_RCV;
+            }
+            else { // duplicate
+                state = START;
+                return DUPLICATE;
+            }
         }
         break;
 
     case C_RCV:
         if (buf == (addr ^ expected)) {
+            state = BCC_OK;
+        }
+        else if (is_disc && (addr ^ DISC)) {
             state = BCC_OK;
         }
         else if (buf == FLAG)
@@ -57,7 +68,8 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 
     case BCC_OK:
         if (buf == FLAG){
-            return 1;
+            if (is_disc) return DISCONNECT;
+            return COMPLETE;
         }
         else {
             data_idx = 0;
@@ -97,7 +109,7 @@ int stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
     case STOP:
         break;
     }
-    return 0;
+    return CONTINUE;
 }
 
 int writeCtrlFrame(int fd, unsigned char ctrl, unsigned char addr)
