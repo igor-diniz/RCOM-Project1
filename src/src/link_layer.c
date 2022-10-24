@@ -180,6 +180,7 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     }
     i += 4;
     dest[i] = bcc; //printf("%x\n", dest[i]);
+    printf("bcc-> %x\n", bcc);
     dest[i + 1] = FLAG; //printf("%x\n", dest[i + 1]);
     return i + 2;
 }
@@ -213,14 +214,14 @@ int llwrite(const unsigned char *buf, int bufSize)
         if (step == COMPLETE) {
             printf("Received RR frame.\n");
             frameNumber = !frameNumber;
-            return 0;
+            return nbytes;
         }
         else if (step == REJECTED) {
             printf("Received REJ frame.\n");
             alarmTriggered = 0;
         }
     }
-    return nbytes;
+    return -1;
 }
 
 ////////////////////////////////////////////////

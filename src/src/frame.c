@@ -62,8 +62,9 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
         }
         else if (buf == FLAG)
             state = FLAG_RCV;
-        else
+        else {
             state = START;
+        }
         break;
 
     case BCC_OK:
@@ -88,14 +89,16 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
             for (int i = 0; i < data_idx; i++) {
                 bcc ^= data[i];
             }
+            printf("bcc-> %x\n", bcc_rcv);
 
             if (bcc_rcv == bcc) {
                 state = START;
-                return 1;
+                printf("it was indeed marked as correct\n");
+                return COMPLETE;
             }
             else {
                 state = START;
-                return 2;
+                return REJECTED;
             }
             break;
 

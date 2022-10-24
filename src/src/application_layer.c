@@ -88,10 +88,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             if(nbytes == -1){
                 printf("An error occurred in the reading of the %s", filename);
             }
+            if (i == 50 && 0) {
+                printf("-------------------NOISE NOW-------------------\n");
+                sleep(2);
+            }
 
             i++;
         
-            llwrite(buf, nbytes);
+            if (llwrite(buf, nbytes) == -1) break;
         }
         close(fd);
     }
@@ -106,16 +110,16 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         int n = 0, llSize = 0;
         while (llSize != -1) {
-            if (n == 50 && 0) {
-                printf("-------------------NOISE NOW-------------------\n");
-                sleep(2);
-            }
             llSize = llread(buf);
             if (llSize > 0) {
                 nbytes = write(fd, buf, llSize);
                 printf("-- to file -> %d bytes\n", nbytes);
             }
             n++;
+            if (n == 50 && 0) {
+                printf("-------------------NOISE NOW-------------------\n");
+                sleep(2);
+            }
 
         /*if (buf[0] == 2) { // start
             int i = 1;
