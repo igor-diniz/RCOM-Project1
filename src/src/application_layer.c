@@ -24,35 +24,121 @@ int setUp(const char *serialPort, const char *role, int baudRate,
     return llopen(parameters);
 }
 
-
-/*
-int configureDataPackage(unsigned char* buf, int pkgIndex){
+void configureDataPackage(unsigned char* buf, int pkgIndex){
     unsigned char auxBuffer[BUF_SIZE] = {0};
     auxBuffer[0] = 1;                        // C
     auxBuffer[1] = pkgIndex % 255;           // N
     auxBuffer[2] = MAX_CHUNK_SIZE / 256;     // L1
     auxBuffer[3] = MAX_CHUNK_SIZE % 256;     // L2
     memcpy(&auxBuffer[4], buf, MAX_CHUNK_SIZE);
-    memcpy(buf, auxBuffer[1], MAX_CHUNK_SIZE + 4);
+    memcpy(buf, auxBuffer, MAX_CHUNK_SIZE + 4);
 }
-*/
 
-/*
-int configureCtrlPackage(int fd, unsigned char* buf, int fileSize, const char *filename){
+int writeCtrl(int fileSize, const char* fileName) {
+    unsigned char buf[BUFFER_SIZE] = {0};
     buf[0] = 2;
     buf[1] = 0;     // fileSize
-    int numOct = (fileSize / 255) + fileSize % 255;
+    int numOct = 0, s = fileSize;
+    while (s > 0) {
+        numOct++;
+        s = s >> 8;
+    }
     buf[2] =  numOct;
 
-    for(int i = 0; i < numOct; i++){
-        if (i != numOct)
-            buf[3 + i] = 255;
-        else if (fileSize % 255){ // if == numOct
-            buf[3 + i] = fileSize % 255; 
+    int i = 0;
+    for (; i < numOct; i++){
+        buf[3 + i] = 0xff & (fileSize >> (8 * (numOct - i - 1)));
+    }
+    i += 3;
+    buf[i] = 2;
+    buf[i + 1] = 1;     // fileSize
+    numOct = strlen(fileName);
+    buf[i + 2] =  numOct;
+
+    i += 3;
+    int j = 0;
+    for (j = 0; j < numOct; j++){
+        buf[i + j] = fileName[j];
+    }
+    return llwrite(buf, i + j);
+}
+
+void applicationTx(const char* filename) {
+    // Opening {filename} and verifying if any error occurred
+    int nbytes = 0, seqN = 0;
+    unsigned char buf[BUF_SIZE];
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        printf("%s cannot be opened \n", filename);
+        exit(-1);
+    }
+    
+    int fileSize = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    if (writeCtrl(fileSize, filename) == -1) {
+        printf("Connection timed out.\n");
+        return;
+    }
+    
+    int i = 0;
+    while ((nbytes = read(fd, buf, MAX_CHUNK_SIZE)) != 0){ // zero indicates end of file
+        if(nbytes == -1){
+            printf("An error occurred in the reading of the %s", filename);
+        }
+        i++;
+        configureDataPackage(buf, seqN);
+        seqN++;
+        if (llwrite(buf, nbytes + 4) == -1) break;
+    }
+    close(fd);
+}
+
+void applicationRx(const char* filename) {
+    unsigned char buf[BUF_SIZE];
+    int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXO);
+    int fileSize = 0;
+    char rcvFilename[BUFFER_SIZE] = {0};
+    if (fd < 0) {
+        printf("%s cannot be opened \n", filename);
+        exit(-1);
+    }
+
+    int llSize = 0;
+    while (llSize != -1) {
+        llSize = llread(buf);
+        if (llSize > 0) {
+            if (buf[0] == 2) { // start
+                int i = 1;
+                while (i < llSize) {
+                    if (buf[i] == 0) { // size
+                        int l = (int)buf[i + 1];
+                        i += 2;
+                        for (int k = l - 1; k >= 0; k--) {
+                            fileSize += (buf[i] << (8 * k));
+                            i++;
+                        }
+                    }
+                    else if (buf[i] == 1) { // file name
+                        int l = (int)buf[i + 1];
+                        i += 2;
+                        for (int k = 0; k < l; k++) {
+                            rcvFilename[k] = buf[i];
+                            rcvFilename[k + 1] = '\0';
+                            i++;
+                        }
+                    }
+                    else i++;
+                }
+            }
+            if (buf[0] == 1) {
+                int idx = buf[1];
+                int num = buf[2] * 256 + buf[3];
+                int nbytes = write(fd, &buf[4], llSize - 4);
+            }
         }
     }
+    close(fd);
 }
-*/
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
@@ -61,92 +147,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Couldn't establish connection.\n");
     }
 
-    int nbytes;
-    unsigned char buf[BUF_SIZE];
-
     // Transmitter
     if (parameters.role == LlTx) {
-
-        // Openning {filename} and verifying if any error occurred
-        int fd = open(filename, O_RDONLY);
-        if (fd < 0) {
-            printf("%s cannot be opened \n", filename);
-            exit(-1);
-        }
-       
-       /*
-       int fileSize;
-        fileSize = lseek(fd, 0, SEEK_END);
-
-        unsigned char ctrlPkg[BUF_SIZE] = {0};
-        configureCtrlPackage(fd, ctrlPkg, fileSize, filename);
-        */
-
-        int i = 0;
-
-        while ((nbytes = read(fd, buf, MAX_CHUNK_SIZE)) != 0){ // zero indicates end of file
-            if(nbytes == -1){
-                printf("An error occurred in the reading of the %s", filename);
-            }
-            if (i == 50 && 0) {
-                printf("-------------------NOISE NOW-------------------\n");
-                sleep(2);
-            }
-
-            i++;
-        
-            if (llwrite(buf, nbytes) == -1) break;
-        }
-        close(fd);
+        applicationTx(filename);
     }
     else if (parameters.role == LlRx) {// Receiver
-        int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXO);
-        //int fileSize = 0;
-        //char* rcvFilename[BUFFER_SIZE] = {0};
-        if (fd < 0) {
-            printf("%s cannot be opened \n", filename);
-            exit(-1);
-        }
-
-        int n = 0, llSize = 0;
-        while (llSize != -1) {
-            llSize = llread(buf);
-            if (llSize > 0) {
-                nbytes = write(fd, buf, llSize);
-                printf("-- to file -> %d bytes\n", nbytes);
-            }
-            n++;
-            if (n == 50 && 0) {
-                printf("-------------------NOISE NOW-------------------\n");
-                sleep(2);
-            }
-
-        /*if (buf[0] == 2) { // start
-            int i = 1;
-            for (; i < frameSize; i++) {
-                if (buf[i] == 0) { // size
-                    int l = buf[i + 1];
-                    i += 2;
-                    for (int k = l; k >= 0; k++) {
-                        fileSize += (buf[i] << (8 * k));
-                        i++;
-                    }
-                }
-                if (buf[i] == 1) { // file name
-                    int l = buf[i + 1];
-                    i += 2;
-                    for (int k = 0; k < l; k++) {
-                        rcvFilename[k] = buf[i];
-                        rcvFilename[k + 1] = '\0';
-                        i++;
-                    }
-                }
-        
-                }
-            }
-        }*/
-        }
-        close(fd);
+        applicationRx(filename);
     }
 
     llclose(1);

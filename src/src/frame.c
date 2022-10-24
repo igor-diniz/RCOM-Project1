@@ -89,11 +89,9 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
             for (int i = 0; i < data_idx; i++) {
                 bcc ^= data[i];
             }
-            printf("bcc-> %x\n", bcc_rcv);
 
             if (bcc_rcv == bcc) {
                 state = START;
-                printf("it was indeed marked as correct\n");
                 return COMPLETE;
             }
             else {
