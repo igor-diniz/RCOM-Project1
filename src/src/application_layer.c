@@ -34,9 +34,10 @@ void configureDataPackage(unsigned char* buf, int pkgIndex){
     memcpy(buf, auxBuffer, MAX_CHUNK_SIZE + 4);
 }
 
-int writeCtrl(int fileSize, const char* fileName) {
+int writeCtrl(int fileSize, const char* fileName, int start) {
     unsigned char buf[BUFFER_SIZE] = {0};
-    buf[0] = 2;
+    if (start == 1) buf[0] = 2;
+    else buf[0] = 3;
     buf[1] = 0;     // fileSize
     int numOct = 0, s = fileSize;
     while (s > 0) {
@@ -65,7 +66,7 @@ int writeCtrl(int fileSize, const char* fileName) {
 
 void applicationTx(const char* filename) {
     // Opening {filename} and verifying if any error occurred
-    int nbytes = 0, seqN = 0;
+    int nbytes = 0, seqN = 0, written = 0;
     unsigned char buf[BUF_SIZE];
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
@@ -75,7 +76,7 @@ void applicationTx(const char* filename) {
     
     int fileSize = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
-    if (writeCtrl(fileSize, filename) == -1) {
+    if (writeCtrl(fileSize, filename, 1) == -1) {
         printf("Connection timed out.\n");
         return;
     }
@@ -89,14 +90,45 @@ void applicationTx(const char* filename) {
         configureDataPackage(buf, seqN);
         seqN++;
         if (llwrite(buf, nbytes + 4) == -1) break;
+        written += nbytes;
+        printBar(written, fileSize);
+    }
+
+    if (writeCtrl(fileSize, filename, 0) == -1) {
+        printf("Connection timed out.\n");
+        return;
     }
     close(fd);
+}
+
+void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilename) {
+    int i = 1;
+    while (i < llSize) {
+        if (buf[i] == 0) { // size
+            int l = (int)buf[i + 1];
+            i += 2;
+            for (int k = l - 1; k >= 0; k--) {
+                *fileSize += (buf[i] << (8 * k));
+                i++;
+            }
+        }
+        else if (buf[i] == 1) { // file name
+            int l = (int)buf[i + 1];
+            i += 2;
+            for (int k = 0; k < l; k++) {
+                rcvFilename[k] = buf[i];
+                rcvFilename[k + 1] = '\0';
+                i++;
+            }
+        }
+        else i++;
+    }
 }
 
 void applicationRx(const char* filename) {
     unsigned char buf[BUF_SIZE];
     int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXO);
-    int fileSize = 0;
+    int fileSize = 0, written = 0, prev_idx = -1;
     char rcvFilename[BUFFER_SIZE] = {0};
     if (fd < 0) {
         printf("%s cannot be opened \n", filename);
@@ -108,32 +140,27 @@ void applicationRx(const char* filename) {
         llSize = llread(buf);
         if (llSize > 0) {
             if (buf[0] == 2) { // start
-                int i = 1;
-                while (i < llSize) {
-                    if (buf[i] == 0) { // size
-                        int l = (int)buf[i + 1];
-                        i += 2;
-                        for (int k = l - 1; k >= 0; k--) {
-                            fileSize += (buf[i] << (8 * k));
-                            i++;
-                        }
-                    }
-                    else if (buf[i] == 1) { // file name
-                        int l = (int)buf[i + 1];
-                        i += 2;
-                        for (int k = 0; k < l; k++) {
-                            rcvFilename[k] = buf[i];
-                            rcvFilename[k + 1] = '\0';
-                            i++;
-                        }
-                    }
-                    else i++;
+                receiveCtrl(buf, llSize, &fileSize, rcvFilename);
+            }
+            else if (buf[0] == 3) { // end
+                char rcvFilenameEnd[BUFFER_SIZE] = {0};
+                int fileSizeEnd = 0;
+                receiveCtrl(buf, llSize, &fileSizeEnd, rcvFilenameEnd);
+                if (fileSize != fileSizeEnd || strcmp(rcvFilename, rcvFilenameEnd) != 0) {
+                    printf("An error occurred.\n");
                 }
             }
-            if (buf[0] == 1) {
+            else if (buf[0] == 1) {
                 int idx = buf[1];
+                if (idx != (prev_idx + 1) % 255) {
+                    printf("An error occured.\n");
+                    break;
+                }
+                prev_idx++;
                 int num = buf[2] * 256 + buf[3];
                 int nbytes = write(fd, &buf[4], llSize - 4);
+                written += nbytes;
+                printBar(written, fileSize);
             }
         }
     }
@@ -145,6 +172,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 {
     if (setUp(serialPort, role, baudRate, nTries, timeout) == -1) {
         printf("Couldn't establish connection.\n");
+        llclose(1);
+        return;
     }
 
     // Transmitter

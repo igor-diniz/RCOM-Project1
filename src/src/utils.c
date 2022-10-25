@@ -45,3 +45,15 @@ int deStuff(unsigned char *dest, int bufSize) {
     }
     return dest_i;
 }
+
+void printBar(int cur, int total) {
+    if (total > 0) {
+        int pt = (cur * 100) /  total;
+        printf("[");
+        for (int i = 0; i < 200; i += 10) {
+            if (i < pt * 2) printf("#");
+            else printf(" ");
+        }
+        printf("] (%d\%)\n", pt);
+    }
+}

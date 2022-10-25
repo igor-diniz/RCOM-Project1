@@ -1,4 +1,5 @@
 #include "string.h"
+#include "stdio.h"
 
 #define BUFFER_SIZE 256
 
@@ -17,3 +18,10 @@ int stuff(const unsigned char *src, unsigned char* dest, int bufSize);
  * @return size of the new buffer.
 */
 int deStuff(unsigned char *dest, int bufSize);
+
+/**
+ * Display the loading bar.
+ * @param cur Current value.
+ * @param total Total value
+*/
+void printBar(int cur, int total);
