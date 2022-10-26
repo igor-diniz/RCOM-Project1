@@ -38,6 +38,10 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
             is_disc = 1;
             state = C_RCV;
         }
+        else if (buf == (REJ | (expected & 0x80))) {
+            state = START;
+            return REJECTED;
+        }
         else {
             int test = testCtrl(buf, expected);
             if (test == 0 || test == -1) { // not valid
@@ -82,11 +86,10 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 
     case DATA:
         if (buf == FLAG) { // finished
-            data_idx--;
             bcc = 0x00;
-            int bcc_rcv = data[data_idx];
             data_idx = deStuff(data , data_idx);
-            for (int i = 0; i < data_idx; i++) {
+            int bcc_rcv = data[data_idx - 1];
+            for (int i = 0; i < data_idx - 1; i++) {
                 bcc ^= data[i];
             }
 
@@ -99,7 +102,6 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
                 return REJECTED;
             }
             break;
-
         }
         else {
             data[data_idx] = buf;

@@ -3,12 +3,12 @@
 int stuff(const unsigned char *src, unsigned char* dest, int bufSize) {
     int dest_i = 0;
     for (int i = 0; i < bufSize; i++) {
-        if (src[i] == 0x7e && i + 1 < bufSize) {
+        if (src[i] == 0x7e) {
             dest[dest_i] = 0x7d;
             dest_i++;
             dest[dest_i] = 0x5e;
         }
-        else if (src[i] == 0x7d && i + 1 < bufSize) {
+        else if (src[i] == 0x7d) {
             dest[dest_i] = 0x7d;
             dest_i++;
             dest[dest_i] = 0x5d;
@@ -54,6 +54,6 @@ void printBar(int cur, int total) {
             if (i < pt * 2) printf("#");
             else printf(" ");
         }
-        printf("] (%d\%)\n", pt);
+        printf("] (%d%%)\n", pt);
     }
 }

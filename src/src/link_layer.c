@@ -166,6 +166,7 @@ int disconnect()
 
 int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     unsigned char copy[BUF_SIZE + 1] = {0};
+    unsigned char to_stuff[BUF_SIZE + 1] = {0};
     dest[0] = FLAG; //printf("%x\n", dest[0]);
     dest[1] = ADDR_T; //printf("%x\n", dest[1]);
     dest[2] = frameNumber << I_CTRL_SHIFT; //printf("%x\n", dest[2]);
@@ -173,17 +174,18 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     unsigned char bcc = 0;
     for (int j = 0; j < bufSize; j++) {
         bcc ^= buf[j];
+        to_stuff[j] = buf[j];
     }
-    bufSize = stuff(buf, copy, bufSize);
+    to_stuff[bufSize] = bcc;
+    bufSize = stuff(to_stuff, copy, bufSize + 1);
     int i = 0;
     for (; i < bufSize; i++) {
         dest[i + 4] = copy[i];
         //printf("%x\n", dest[i]);
     }
     i += 4;
-    dest[i] = bcc; //printf("%x\n", dest[i]);
-    dest[i + 1] = FLAG; //printf("%x\n", dest[i + 1]);
-    return i + 2;
+    dest[i] = FLAG; //printf("%x\n", dest[i + 1]);
+    return i + 1;
 }
 
 ////////////////////////////////////////////////
@@ -220,6 +222,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         else if (step == REJECTED) {
             if (VERBOSE) printf("Received REJ frame.\n");
             alarmTriggered = 0;
+            numTries++;
         }
     }
     return -1;

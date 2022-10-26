@@ -24,12 +24,12 @@ int setUp(const char *serialPort, const char *role, int baudRate,
     return llopen(parameters);
 }
 
-void configureDataPackage(unsigned char* buf, int pkgIndex){
+void configureDataPackage(unsigned char* buf, int pkgIndex, int size){
     unsigned char auxBuffer[BUF_SIZE] = {0};
     auxBuffer[0] = 1;                        // C
     auxBuffer[1] = pkgIndex % 255;           // N
-    auxBuffer[2] = MAX_CHUNK_SIZE / 256;     // L1
-    auxBuffer[3] = MAX_CHUNK_SIZE % 256;     // L2
+    auxBuffer[2] = size / 256;     // L1
+    auxBuffer[3] = size % 256;     // L2
     memcpy(&auxBuffer[4], buf, MAX_CHUNK_SIZE);
     memcpy(buf, auxBuffer, MAX_CHUNK_SIZE + 4);
 }
@@ -87,9 +87,12 @@ void applicationTx(const char* filename) {
             printf("An error occurred in the reading of the %s", filename);
         }
         i++;
-        configureDataPackage(buf, seqN);
+        configureDataPackage(buf, seqN, nbytes);
         seqN++;
-        if (llwrite(buf, nbytes + 4) == -1) break;
+        if (llwrite(buf, nbytes + 4) == -1) {
+            printf("Connection timed out.\n");
+            return;
+        }
         written += nbytes;
         printBar(written, fileSize);
     }
@@ -153,12 +156,12 @@ void applicationRx(const char* filename) {
             else if (buf[0] == 1) {
                 int idx = buf[1];
                 if (idx != (prev_idx + 1) % 255) {
-                    printf("An error occured.\n");
+                    printf("An error occurred.\n");
                     break;
                 }
                 prev_idx++;
                 int num = buf[2] * 256 + buf[3];
-                int nbytes = write(fd, &buf[4], llSize - 4);
+                int nbytes = write(fd, &buf[4], num);
                 written += nbytes;
                 printBar(written, fileSize);
             }
