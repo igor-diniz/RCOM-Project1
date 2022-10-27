@@ -222,6 +222,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         else if (step == REJECTED) {
             if (VERBOSE) printf("Received REJ frame.\n");
             alarmTriggered = 0;
+            if (numTries > 0) numTries = 0;
             numTries++;
         }
     }
@@ -244,9 +245,14 @@ int llread(unsigned char *packet) {
                 if (step == COMPLETE) {
                     size = getData(packet);
                 }
-                writeCtrlFrame(fd, RR | (frameNumber << R_CTRL_SHIFT), ADDR_T);
                 if (VERBOSE) printf("Sent RR frame.\n");
-                if (step == COMPLETE) frameNumber = !frameNumber;
+                if (step == COMPLETE) {
+                    writeCtrlFrame(fd, RR | (frameNumber << R_CTRL_SHIFT), ADDR_T);
+                    frameNumber = !frameNumber;
+                }
+                else if (step == DUPLICATE) {
+                    writeCtrlFrame(fd, RR | (!frameNumber << R_CTRL_SHIFT), ADDR_T);
+                }
                 return size;
             }
             else if (step == REJECTED) {

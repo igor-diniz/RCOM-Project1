@@ -51,12 +51,11 @@ int writeCtrl(int fileSize, const char* fileName, int start) {
         buf[3 + i] = 0xff & (fileSize >> (8 * (numOct - i - 1)));
     }
     i += 3;
-    buf[i] = 2;
-    buf[i + 1] = 1;     // fileSize
+    buf[i] = 1;     // fileName
     numOct = strlen(fileName);
-    buf[i + 2] =  numOct;
+    buf[i + 1] =  numOct;
 
-    i += 3;
+    i += 2;
     int j = 0;
     for (j = 0; j < numOct; j++){
         buf[i + j] = fileName[j];
@@ -81,12 +80,10 @@ void applicationTx(const char* filename) {
         return;
     }
     
-    int i = 0;
     while ((nbytes = read(fd, buf, MAX_CHUNK_SIZE)) != 0){ // zero indicates end of file
         if(nbytes == -1){
             printf("An error occurred in the reading of the %s", filename);
         }
-        i++;
         configureDataPackage(buf, seqN, nbytes);
         seqN++;
         if (llwrite(buf, nbytes + 4) == -1) {
@@ -114,6 +111,7 @@ void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilenam
                 *fileSize += (buf[i] << (8 * k));
                 i++;
             }
+            i--;
         }
         else if (buf[i] == 1) { // file name
             int l = (int)buf[i + 1];
@@ -123,6 +121,7 @@ void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilenam
                 rcvFilename[k + 1] = '\0';
                 i++;
             }
+            i--;
         }
         else i++;
     }
