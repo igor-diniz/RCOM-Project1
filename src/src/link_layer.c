@@ -172,12 +172,14 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     dest[2] = frameNumber << I_CTRL_SHIFT; //printf("%x\n", dest[2]);
     dest[3] = ADDR_T ^ dest[2]; //printf("%x\n", dest[3]);
     unsigned char bcc = 0;
+    // for loop does the parity over each of the bits of 'the data octets' and the 'BCC'
     for (int j = 0; j < bufSize; j++) {
         bcc ^= buf[j];
         to_stuff[j] = buf[j];
     }
     to_stuff[bufSize] = bcc;
-    bufSize = stuff(to_stuff, copy, bufSize + 1);
+    bufSize = stuff(to_stuff, copy, bufSize + 1); 
+    //now 'copy' contains the 'to_stuff' buffer with the 'byte stuffing' engine changes
     int i = 0;
     for (; i < bufSize; i++) {
         dest[i + 4] = copy[i];
@@ -185,6 +187,7 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     }
     i += 4;
     dest[i] = FLAG; //printf("%x\n", dest[i + 1]);
+    //'dest' é uma trama de Informação
     return i + 1;
 }
 
@@ -199,6 +202,7 @@ int llwrite(const unsigned char *buf, int bufSize)
 
 
     bufSize = prepareWrite(buf, tmp, bufSize);
+    //'tmp' é uma trama de Informação
 
     int nbytes = 0;
     alarmTriggered = 0;

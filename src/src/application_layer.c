@@ -26,41 +26,46 @@ int setUp(const char *serialPort, const char *role, int baudRate,
 
 void configureDataPackage(unsigned char* buf, int pkgIndex, int size){
     unsigned char auxBuffer[BUF_SIZE] = {0};
-    auxBuffer[0] = 1;                        // C
-    auxBuffer[1] = pkgIndex % 255;           // N
-    auxBuffer[2] = size / 256;     // L1
-    auxBuffer[3] = size % 256;     // L2
-    memcpy(&auxBuffer[4], buf, MAX_CHUNK_SIZE);
-    memcpy(buf, auxBuffer, MAX_CHUNK_SIZE + 4);
+    auxBuffer[0] = 1; //always 1 cause its a data package   // C
+    auxBuffer[1] = pkgIndex % 255; //seqN mod with 255      // N
+    auxBuffer[2] = size / 256;                              // L1
+    auxBuffer[3] = size % 256;                              // L2
+    memcpy(&auxBuffer[4], buf, MAX_CHUNK_SIZE); //buf tem o conteudo lido do ficheiro
+    memcpy(buf, auxBuffer, MAX_CHUNK_SIZE + 4); 
+    // buf tem agr os 4 parametros iniciais do pacote de dados + o conteudo lido do ficheiro
+    // logo, buf é o nosso pacote de dados completo
 }
 
 int writeCtrl(int fileSize, const char* fileName, int start) {
     unsigned char buf[BUFFER_SIZE] = {0};
     if (start == 1) buf[0] = 2;
     else buf[0] = 3;
-    buf[1] = 0;     // fileSize
+    buf[1] = 0;     // fileSize -> mandatory
     int numOct = 0, s = fileSize;
     while (s > 0) {
         numOct++;
         s = s >> 8;
     }
-    buf[2] =  numOct;
+    buf[2] =  numOct; //specifies the size of the next field
 
     int i = 0;
+    //the for loopfills V1 with the parameter value
     for (; i < numOct; i++){
         buf[3 + i] = 0xff & (fileSize >> (8 * (numOct - i - 1)));
     }
-    i += 3;
-    buf[i] = 1;     // fileName
+    i += 3; 
+    buf[i] = 1;     // fileName -> optional
     numOct = strlen(fileName);
-    buf[i + 1] =  numOct;
+    buf[i + 1] =  numOct; //specifies the size of the next field
 
     i += 2;
     int j = 0;
+    //the for loopfills V2 with the parameter value
     for (j = 0; j < numOct; j++){
         buf[i + j] = fileName[j];
     }
-    return llwrite(buf, i + j);
+    return llwrite(buf, i + j); 
+    //returns the number of bytes written to the file
 }
 
 void applicationTx(const char* filename) {
@@ -75,25 +80,34 @@ void applicationTx(const char* filename) {
     
     int fileSize = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
+
+    // sinalizar o início da transferência do ficheiro
     if (writeCtrl(fileSize, filename, 1) == -1) {
         printf("Connection timed out.\n");
         return;
     }
     
+    // After signaling the start of file transfer successfully..
+    // .. let's start send data:
+    // o while loop termina qd já não houver nada a enviar ou se ocorrer um erro no envio
     while ((nbytes = read(fd, buf, MAX_CHUNK_SIZE)) != 0){ // zero indicates end of file
         if(nbytes == -1){
             printf("An error occurred in the reading of the %s", filename);
         }
-        configureDataPackage(buf, seqN, nbytes);
+        configureDataPackage(buf, seqN, nbytes); //seqN starts at 0
+        //buf é o nosso pacote de dados completo pronto a ser enviado para o ficheiro
         seqN++;
         if (llwrite(buf, nbytes + 4) == -1) {
             printf("Connection timed out.\n");
             return;
         }
+        //depois de o cacote ser enviado..
         written += nbytes;
+        //..damos print de todo o conteúdo já enviado
         printBar(written, fileSize);
     }
 
+    //sinalizar o fim da transmissão (END) -> com a mesma informação do pacote de inicio de transmissão)
     if (writeCtrl(fileSize, filename, 0) == -1) {
         printf("Connection timed out.\n");
         return;
