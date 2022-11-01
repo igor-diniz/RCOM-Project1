@@ -118,23 +118,25 @@ void applicationTx(const char* filename) {
 void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilename) {
     int i = 1;
     while (i < llSize) {
-        if (buf[i] == 0) { // size
-            int l = (int)buf[i + 1];
+        if (buf[i] == 0) { // size (T1)
+            int l = (int)buf[i + 1]; //length do campo seguinte (L1)
             i += 2;
             for (int k = l - 1; k >= 0; k--) {
                 *fileSize += (buf[i] << (8 * k));
                 i++;
             }
+            //filesize => (V1)
             i--;
         }
-        else if (buf[i] == 1) { // file name
-            int l = (int)buf[i + 1];
+        else if (buf[i] == 1) { // file name (T2)
+            int l = (int)buf[i + 1]; //length do campo seguinte (L2)
             i += 2;
             for (int k = 0; k < l; k++) {
                 rcvFilename[k] = buf[i];
                 rcvFilename[k + 1] = '\0';
                 i++;
             }
+            //rcvFilename => (V2)
             i--;
         }
         else i++;
@@ -152,31 +154,32 @@ void applicationRx(const char* filename) {
     }
 
     int llSize = 0;
-    while (llSize != -1) {
+    while (llSize != -1) { // enquanto houver dados para ler
         llSize = llread(buf);
         if (llSize > 0) {
-            if (buf[0] == 2) { // start
+            if (buf[0] == 2) { // start (é um pacote de controlo)
                 receiveCtrl(buf, llSize, &fileSize, rcvFilename);
             }
-            else if (buf[0] == 3) { // end
+            else if (buf[0] == 3) { // end (é um pacote de controlo)
                 char rcvFilenameEnd[BUFFER_SIZE] = {0};
                 int fileSizeEnd = 0;
                 receiveCtrl(buf, llSize, &fileSizeEnd, rcvFilenameEnd);
+                //compara se os pacotes de controlo end e start tem a mesma informação de file size e name
                 if (fileSize != fileSizeEnd || strcmp(rcvFilename, rcvFilenameEnd) != 0) {
                     printf("An error occurred.\n");
                 }
             }
-            else if (buf[0] == 1) {
-                int idx = buf[1];
+            else if (buf[0] == 1) { // é um pacote de dados
+                int idx = buf[1]; //num de seq
                 if (idx != (prev_idx + 1) % 255) {
                     printf("An error occurred.\n");
                     break;
                 }
                 prev_idx++;
-                int num = buf[2] * 256 + buf[3];
-                int nbytes = write(fd, &buf[4], num);
+                int num = buf[2] * 256 + buf[3]; //num de octetos do campo de dados (que começa na pos 4)
+                int nbytes = write(fd, &buf[4], num); //escreve para o file os dados do pacote
                 written += nbytes;
-                printBar(written, fileSize);
+                printBar(written, fileSize); 
             }
         }
     }
@@ -196,7 +199,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     if (parameters.role == LlTx) {
         applicationTx(filename);
     }
-    else if (parameters.role == LlRx) {// Receiver
+    // Receiver
+    else if (parameters.role == LlRx) {
         applicationRx(filename);
     }
 
