@@ -52,6 +52,7 @@ int writeCtrl(int fileSize, const char* fileName, int start) {
     //the for loopfills V1 with the parameter value
     for (; i < numOct; i++){
         buf[3 + i] = 0xff & (fileSize >> (8 * (numOct - i - 1)));
+        //0x1234 -> buf[3]=12 e buf[4]=34
     }
     i += 3; 
     buf[i] = 1;     // fileName -> optional
@@ -72,6 +73,7 @@ void applicationTx(const char* filename) {
     // Opening {filename} and verifying if any error occurred
     int nbytes = 0, seqN = 0, written = 0;
     unsigned char buf[BUF_SIZE];
+    //fd é o ficheiro para escrever
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         printf("%s cannot be opened \n", filename);
@@ -101,7 +103,7 @@ void applicationTx(const char* filename) {
             printf("Connection timed out.\n");
             return;
         }
-        //depois de o cacote ser enviado..
+        //depois de o pacote ser enviado..
         written += nbytes;
         //..damos print de todo o conteúdo já enviado
         printBar(written, fileSize);
@@ -112,7 +114,7 @@ void applicationTx(const char* filename) {
         printf("Connection timed out.\n");
         return;
     }
-    close(fd);
+    close(fd); //o ficheiro para onde escrevemos é fechado
 }
 
 void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilename) {
@@ -171,7 +173,7 @@ void applicationRx(const char* filename) {
             }
             else if (buf[0] == 1) { // é um pacote de dados
                 int idx = buf[1]; //num de seq
-                if (idx != (prev_idx + 1) % 255) {
+                if (idx != (prev_idx + 1) % 255) { //verifica se não é perdido nenhum pacote
                     printf("An error occurred.\n");
                     break;
                 }

@@ -28,6 +28,7 @@ void alarmHandler(int signum) {
 }
 
 int openPort(LinkLayer connectionParameters) {
+    //fd é a porta série
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     if (fd < 0)
     {
@@ -248,9 +249,7 @@ int llread(unsigned char *packet) {
             if (step == COMPLETE || step == DUPLICATE) {
                 if (step == COMPLETE) {
                     size = getData(packet);
-                }
-                if (VERBOSE) printf("Sent RR frame.\n");
-                if (step == COMPLETE) {
+                    if (VERBOSE) printf("Sent RR frame.\n");
                     writeCtrlFrame(fd, RR | (frameNumber << R_CTRL_SHIFT), ADDR_T);
                     frameNumber = !frameNumber;
                 }
