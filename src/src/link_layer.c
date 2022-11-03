@@ -5,7 +5,7 @@
 #include "utils.h"
 #include <signal.h>
 
-static int fd;
+static int fd; //porta série
 static struct termios oldtio;
 static struct termios newtio;
 
@@ -168,10 +168,12 @@ int disconnect()
 int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
     unsigned char copy[BUF_SIZE + 1] = {0};
     unsigned char to_stuff[BUF_SIZE + 1] = {0};
-    dest[0] = FLAG; //printf("%x\n", dest[0]);
-    dest[1] = ADDR_T; //printf("%x\n", dest[1]);
-    dest[2] = frameNumber << I_CTRL_SHIFT; //printf("%x\n", dest[2]);
-    dest[3] = ADDR_T ^ dest[2]; //printf("%x\n", dest[3]);
+
+    dest[0] = FLAG; 
+    dest[1] = ADDR_T; 
+    dest[2] = frameNumber << I_CTRL_SHIFT; 
+    dest[3] = ADDR_T ^ dest[2];
+
     unsigned char bcc = 0;
     // for loop does the parity over each of the bits of 'the data octets' and the 'BCC'
     for (int j = 0; j < bufSize; j++) {
@@ -179,6 +181,7 @@ int prepareWrite(const unsigned char* buf, unsigned char* dest, int bufSize) {
         to_stuff[j] = buf[j];
     }
     to_stuff[bufSize] = bcc;
+
     bufSize = stuff(to_stuff, copy, bufSize + 1); 
     //now 'copy' contains the 'to_stuff' buffer with the 'byte stuffing' engine changes
     int i = 0;

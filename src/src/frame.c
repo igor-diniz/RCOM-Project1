@@ -118,12 +118,14 @@ Step stateStep(unsigned char buf, unsigned char expected, unsigned char addr)
 int writeCtrlFrame(int fd, unsigned char ctrl, unsigned char addr)
 {
     unsigned char buf[BUF_SIZE + 1] = {0};
-    buf[0] = FLAG;
-    buf[1] = addr;
-    buf[2] = ctrl;
-    buf[3] = addr ^ ctrl;
-    buf[4] = FLAG;
+
+    buf[0] = FLAG;         // flag
+    buf[1] = addr;         // campo de endereço: 0x03 ou 0x01
+    buf[2] = ctrl;         // campo de controlo: SET,DISC,UA,RR,REJ
+    buf[3] = addr ^ ctrl;  // campo de proteção de cabeçalho
+    buf[4] = FLAG;         // flag
     buf[5] = '\0';
+
     return write(fd, buf, 5);
 }
 

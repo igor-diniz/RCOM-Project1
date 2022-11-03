@@ -73,7 +73,7 @@ void applicationTx(const char* filename) {
     // Opening {filename} and verifying if any error occurred
     int nbytes = 0, seqN = 0, written = 0;
     unsigned char buf[BUF_SIZE];
-    //fd é o ficheiro para escrever
+    //fd é o ficheiro de onde vamos ler os dados para enviar ao recetor
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         printf("%s cannot be opened \n", filename);
@@ -114,7 +114,7 @@ void applicationTx(const char* filename) {
         printf("Connection timed out.\n");
         return;
     }
-    close(fd); //o ficheiro para onde escrevemos é fechado
+    close(fd); //o ficheiro de onde lemos os dados a enviar é fechado
 }
 
 void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilename) {
@@ -147,6 +147,7 @@ void receiveCtrl(unsigned char* buf, int llSize, int* fileSize, char* rcvFilenam
 
 void applicationRx(const char* filename) {
     unsigned char buf[BUF_SIZE];
+    // ficheiro para onde vamos escrever os dados enviados pelo emissor
     int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXO);
     int fileSize = 0, written = 0, prev_idx = -1;
     char rcvFilename[BUFFER_SIZE] = {0};
@@ -185,7 +186,7 @@ void applicationRx(const char* filename) {
             }
         }
     }
-    close(fd);
+    close(fd); // fechamos o ficheiro para onde escrevemos os dados enviados pelo emissor
 }
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
