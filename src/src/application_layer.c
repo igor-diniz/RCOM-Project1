@@ -28,18 +28,19 @@ void configureDataPackage(unsigned char* buf, int pkgIndex, int size){
     unsigned char auxBuffer[BUF_SIZE] = {0};
     auxBuffer[0] = 1; //always 1 cause its a data package   // C
     auxBuffer[1] = pkgIndex % 255; //seqN mod with 255      // N
-    auxBuffer[2] = size / 256;                              // L1
-    auxBuffer[3] = size % 256;                              // L2
+    auxBuffer[2] = size / 256;                              // L2
+    auxBuffer[3] = size % 256;                              // L1
+
     memcpy(&auxBuffer[4], buf, MAX_CHUNK_SIZE); //buf tem o conteudo lido do ficheiro
     memcpy(buf, auxBuffer, MAX_CHUNK_SIZE + 4); 
-    // buf tem agr os 4 parametros iniciais do pacote de dados + o conteudo lido do ficheiro
-    // logo, buf é o nosso pacote de dados completo
+    //buf tem agr os 4 parametros iniciais do pacote de dados + o conteudo lido do ficheiro
 }
 
 int writeCtrl(int fileSize, const char* fileName, int start) {
     unsigned char buf[BUFFER_SIZE] = {0};
     if (start == 1) buf[0] = 2;
     else buf[0] = 3;
+
     buf[1] = 0;     // fileSize -> mandatory
     int numOct = 0, s = fileSize;
     while (s > 0) {
@@ -49,13 +50,16 @@ int writeCtrl(int fileSize, const char* fileName, int start) {
     buf[2] =  numOct; //specifies the size of the next field
 
     int i = 0;
-    //the for loopfills V1 with the parameter value
+    // the for loop fills V1 with the parameter value
     for (; i < numOct; i++){
         buf[3 + i] = 0xff & (fileSize >> (8 * (numOct - i - 1)));
-        //0x1234 -> buf[3]=12 e buf[4]=34
+        // Example: 0x1234 -> buf[3]=12 e buf[4]=34
     }
-    i += 3; 
+    
+
+    i += 3;
     buf[i] = 1;     // fileName -> optional
+
     numOct = strlen(fileName);
     buf[i + 1] =  numOct; //specifies the size of the next field
 
@@ -65,6 +69,7 @@ int writeCtrl(int fileSize, const char* fileName, int start) {
     for (j = 0; j < numOct; j++){
         buf[i + j] = fileName[j];
     }
+    
     return llwrite(buf, i + j); 
     //returns the number of bytes written to the file
 }
