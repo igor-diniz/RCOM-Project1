@@ -4,6 +4,7 @@
 #include "link_layer.h"
 #include "utils.h"
 #include "frame.h"
+#include <time.h>
 
 #define BUF_SIZE 256
 #define MAX_CHUNK_SIZE 128
@@ -197,6 +198,9 @@ void applicationRx(const char* filename) {
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
+    clock_t t;
+    t = clock();
+
     if (setUp(serialPort, role, baudRate, nTries, timeout) == -1) {
         printf("Couldn't establish connection.\n");
         llclose(1);
@@ -213,4 +217,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
 
     llclose(1);
+
+    t = clock() - t;
+    double time_taken = ((double)t)/CLOCKS_PER_SEC; 
+    printf("Transfer complete in %f seconds.\n", time_taken);
 }
